@@ -1,0 +1,149 @@
+--- PROGRAMAREA CALCULATOARELOR ---
+--- TEMA 1 - TetriBit ---
+
+
+Incep prin segmentarea codului:
+
+	1. Biblioteci - Linia 20
+	2. Afisare - Linia 30
+	3. Coliziune Verticala - Linia 47
+	4. Coliziune Laterala - Linia 71
+	5. Linii complete - Linia 99
+	6. Main - Linia 128
+	7. Alte Detalii - 149
+
+--- ---------- ---
+--- BIBLIOTECI ---
+
+	Folosesc:
+		<stdio.h> pentru functiile printf si scanf
+
+		<inttypes.h> deoarece include si bibilioteca <stdint.h>, necesara pentru utilizarea tipurilor de date precum uint64_t, uint16_t, uint8_t etc. Pe langa acestea, <inttypes> ofera facilitati pentru familiile de functii print si scan (precum printf si scanf), anume o lista de macros ce se extind in "string-uri" in interiorul functiilor antepuse. In cod, folosesc PRIu64 si SCNu64 (pentru functiile respective), echivalente cu "llu" (din "%llu")
+
+		<math.h> pentru utilizarea functiilor sqrt si pow, necesare pentru calcularea scorului
+
+--- --------------- ---
+--- FUNCTIA afisare ---
+
+	Functia primeste ca argumente:
+		uint64_t harta
+			Aceasta este harta cu care lucram, variabila de 64 de biti
+		int linii_complete
+			Variabila necesara doar pentru calcularea scorului
+		int gameover
+			Variabila care decide daca scorul va fi calculat si afisat (pe parcursul codului atribui valoarea 1 pentru a-l calcula, si 0 pentru a NU il calcula)
+	
+	Functia parcurge bitii variabilei harta de la stanga la dreapta si cauta biti setati. In cazul in care un bit este setat afiseaza "#", iar in caz contrar ".".
+
+	Totodata, pentru a nu rula de mai multe ori instructiunea repetitiva for, ne folosim de cel de-al treilea argument al functiei (gameover) pentru a decide daca functia va calcula scorul. Intrucat numarul de "zero-uri" din harta intra in calculul acestui scor, daca am decis ca acesta va fi calculat (prin gameover = 1) atunci vom numara in variabila nr_zerouri de cate ori afisam simbolul ".".
+
+	La sfarsitul functiei, in functie de variabila gameover, calculam scorul cu formula oferita in enuntul temei si totodata il afisam corespunzator.
+
+--- --------------- ---
+--- FUNCTIA col_ver ---
+
+	Functia (prescurtare de la coliziune verticala) primeste ca argumente:
+		uint64_t harta
+			Harta cu care lucram
+		int piesa
+			Piesa cu care lucram la un moment dat
+		int inaltime
+			Inaltimea (din harta) la care piesa se afla la un moment dat (inaltime = 0 este baza hartii, adica primii 8 biti de la dreapta numarului harta).
+
+	col_ver testeaza daca piesa se poate "deplasa" in conditii de siguranta in jos (0 in caz afirmativ, 1 in caz negativ - mai precis, 1 semnifica "va avea loc o coliziune")
+
+	Incepe acest lucru prin verificarea inaltimii la care se afla piesa. In cazul in care se afla la baza hartii (inaltime = 0), piesa NU mai poate continua.
+
+	In variabila biti (de tipul uint16_t, deoarece avem nevoie doar de 16 biti) salvam partea hartii cu care piesa ar putea intra in coliziune, anume bitii de "sub" piesa.
+
+	Pe acesti biti din cadrul hartii ii "aducem" (prin shift-are) intr-un numar de 16 biti pentru a putea fi comparati cu bitii din piesa (intrucat piesa nu are niciodata mai mult de 16 biti).
+	In cazul in care piesa se suprapune peste acesti biti (in urma operatorului "&", cel putin un bit din variabila biti este setat) inseamna ca nu se poate executa deplasarea in jos, intrucat VA AVEA LOC o coliziune.
+
+	Luand in calcul 16 biti, se verifica si bitii de "sub" jumatatea de sus a piesei (in cazul in care piesa este de inaltime 2). Astfel, o piesa in forma de "L intors la 180 de grade" nu se poate "agata" de harta cu acea "codita" din coltul din stanga sus.
+
+	Daca pana acum nu a fost detectata un caz "rauvoitor", inseamna ca NU VA AVEA LOC o coliziune
+
+--- --------------- ---
+--- FUNCTIA col_lat ---
+
+	Functia (prescurtare de la coliziune laterala) primeste ca argumente
+		uint64_t harta
+			Harta cu care lucram
+		int piesa
+			Piesa cu care lucram la un moment dat
+		int inaltime
+			Inaltimea (din harta) la care piesa se afla la un moment dat.
+		int directie
+			Numarul ce reprezinta TRANSFORMAREA ce trebuie efectuata piesei la un moment dat.
+
+	Considerand ca valoarea variabilei directie este una pozitiva pentru deplasare spre dreapta, respectiv negativa pentru deplasare spre stanga, functia returneaza numarul MAXIM de mutari (pozitiv) pe care piesa o poate executa in harta in acea directie.
+
+	Incepe prin a testa nulitatea variabilei directie. Pentru directie = 0 nu are rost sa testam vreo coliziune laterala.
+
+	Urmeaza sa deplasam piesa la stanga sau la dreapta (prin shift-are, conform directiei, de maxim 7 ori si sa testam daca nu cumva se suprapune peste vreun bit din harta (metoda descrisa si la functia col_ver, doar ca de data aceasta comparam bitii aflati pe aceeasi inaltime precum piesa).
+
+	In caz afirmativ (piesa se suprapune peste cel putin un bit al hartii), inseamna ca am deplasat piesa cu un pas prea pult, deci valoarea lui i-1 este numarul maxim de mutari in acea directie (0 este minimumul lui i-1, intrucat piesa nu poate fi deja suprapusa peste harta - ea ar trebui deplasata cel putin o data pentru acest eveniment) si oprim verificarea prin break.
+
+	La fiecare deplasare, in caz ca piesa nu se suprapune peste harta, testam ca nu cumva ea sa fi ajuns la marginea hartii. Conform directiei, comparam bitii piesei cu bitii numerelor 257 (ce reprezinta o linie de 2 "#" perpendiculara pe pamant, la marginea din stanga hartii) si 32896 (ce reprezinta o linie de 2 "#" perpendiculara pe pamant, la marginea din dreapta hartii). In caz afirmativ (piesa se afla la marginea hartii),
+	ea nu mai poate continua, deci acesta (i) este numarul maxim de mutari pe care le poate efectua in acea directie.
+
+	Urmeaza sa deplasam piesa la stanga sau la dreapta (conform directiei) pentru a trece la pasul urmator (sa repete ultimele 3 paragrafe).
+
+	Ulterior, dupa ce a fost gasit un numar maxim de mutari, salvat in variabila int nrmutari, il comparam cu valoarea variabilei directie, ce semnifica numarul de mutari pe care INTENTIONAM sa le facem. Astfel, daca intentionam un numar mai mare decat numarul maxim, vom putea executa doar numarul maxim si, in caz ca nu vrem sa executam atatea mutari (mai putine decat numarul maxim) le vom executa doar pe acelea. Totodata, respectam semnul valorii directie, intrucat functia returneaza mereu o valoare pozitiva.
+
+--- ----------------- ---
+--- FUNCTIA testlinie ---
+
+	Functia primeste ca argumente:
+		uint64_t valori[]
+			Un tablou unidimensional in care (pe parcursul functiei) sunt salvate 2 valori. Pe pozitia [0] este salvata harta, iar pe pozitia [1] numarul de linii complete (explicate mai jos).
+
+	Aceasta functie cauta linii complete (8 biti setati pe aceeasi linie) si, totodata, le elimina, conform cerintei, returnand, in final, tabloul unidimensional valori, in care pe pozitia [0] a fost salvata harta modificata (cu linii eliminate) iar pe pozitia [1] numarul liniilor eliminate.
+
+	Intrucat functia returneaza un vector, a fost nevoie de utilizarea unui pointer catre aceasta functie, declarat "uint64_t *pointer" in functia main().
+
+	Dupa declararile de variabile, functia incepe prin compararea bitilor fiecarei linii (prin shift-area variabilei harta la dreapta cu un multiplu de 8 - in functie de numarului pasului, dat de contorul i) cu bitii numarului 255 (ce reprezinta o linie plina de 1).
+
+	In caz afirmativ, vom elimina acea linie, prin urmare incrementam numarul de linii completate.
+	Ulterior, in variabila harta_aux vom salva bitii de "sub" bitii liniei complete din harta, iar in variabila harta_aux2 vom salva bitii de "deasupra" bitilor liniei complete din harta.
+
+	Vom face acest lucru prin shift-area "inainte si inapoi" a variabilei harta (astfel resetand un anumit numar de biti din harta).
+	Sunt constient ca resetarea respectivilor biti putea fi facuta si prin resetarea, pe rand, a fiecarui bit de deasupra sau de sub linia completata, prin instructiuni repetitive for, dar am considerat ca metoda pe care am implementat-o este mai usor de inteles.
+
+	Cu toate acestea, se poate intampla ca linia completata sa fie la baza hartii sau in varful ei, caz in care una dintre variabilele harta_aux si harta_aux2 va trebui shift-ata de 64 de ori intr-o directie, ceea ce depaseste marimea lor ca variabile. Prin urmare, intr-un astfel de caz, atribuim simplu valoarea 0 variabilei in cauza.
+
+	Pentru variabila harta_aux2, ce salveaza partea hartii de DEASUPRA liniei completate, vom shift-a "inapoi" de 8 ori mai putin (dupa cum se vede in cod), semnificand "caderea" cu o pozitie liniilor de deasupra liniei completate.
+
+	Urmeaza "lipirea" celor doua parti de harta (harta_aux si harta_aux2) in noua harta, in care linia completata a fost eliminata.
+
+	Nu uitam sa decrementam valoarea contorului i pentru a testa din nou linia la care s-a ajuns, in caz ca prin "cadere" a ajuns o alta linie completata in locul celei initiale.
+
+	Pentru returnare salvam corespunzator cele 2 valori ale vectorului "valori" (explicate la inceputul descrierii acestei functii).
+
+--- ------------ ---
+--- FUNCTIA main ---
+
+	Codul principal incepe prin citirea input-ului conform cerintei, citind si salvand:
+		Numarul corespunzator configuratiei hartii in uint64_t harta
+		Urmatorul numar, corespunzator numarului de piese, in int nr_piese
+		Piesele si transformarile specifice fiecareia in int transf[nr_piese][9]
+			Conform input-ului, pe prima coloana din tabloul bidimensional transf vor fi salvate piesele, urmate (pe linia fiecareia) de transformarile lor.
+
+	In cazul in care nu exista piese cu care sa se lucreze (nr_piese = 0), jocul afiseaza doar configuratia hartii,
+	printr-un apel la functia afisare cu argumentul gameover = 1, corespunzator afisarii scorului si mesajului "GAME OVER!".
+
+	Urmeaza sa luam pe rand fiecare piesa, ce incepe de la inaltimea 8 a hartii (adica in afara ei, intrucat inaltime = 0 reprezinta baza hartii).
+
+	Pentru fiecare piesa testam, pe rand, daca transformarile specifice fiecareia pot fi executate regulamentar.
+	
+	Astfel, inainte de fiecare afisare, codul, in ordine:
+	1. Verifica daca nu poate realiza deplasarea IN JOS, caz in care verifica conditii de terminare a jocului, precum nepatrunderea completa a piesei in harta sau inexistenta unor piese ulterioare.
+	2. Daca poate realiza deplasarea in jos, o face si verifica daca poate realiza miscari IN LATERAL (pe care le face in caz afirmativ).
+	3. Daca piesa astfel coborata nu se va opri la URMATOAREA coborare, este afisata (daca se va opri, cazurile de afisare sunt prezentate la pasul 1)
+
+--- ------------ ---
+--- ALTE DETALII ---
+
+	- Folosesc functii pentru numeroasele facilitati pe care le ofera, precum lucrul cu variabile locale, fiind astfel scutit de unele actiuni precum declararea de variabile auxiliare. Totodata, consider ca un cod este mult mai bine inteles si chiar mai usor de folosit cand secventele mai lungi ce pot fi considerate un cod cu totul separat sunt prezentate separat.
+	- Folosesc un tablou bidimensional pentru a salva piesele si transformarile asociate fiecareia intrucat consider ca este o reprezentare ierarhica, usoara de inteles, a mutarilor.
+	- Folosesc un pointer pentru functia testlinie intrucat consider ca numararea liniilor complete poate fi realizata extrem de usor in cadrul eliminarii liniilor complete printr-o singura linie de cod. Acest numar il trec usor prin functie prin intermediul unui vector, intrucat functia are nevoie si de harta pentru a cauta liniile complete. Consider utilizarea unui pointer pentru o functie care "returneaza 2 variabile" mai eficienta decat crearea unei alte functii cu singurul scop de a numara acele linii pe harta.
